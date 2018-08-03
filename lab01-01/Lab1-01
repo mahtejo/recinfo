@@ -1,0 +1,252 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Lab 01 - Parte 1: Índice Invertido e Busca Booleana"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Importando as bibliotecas necessárias:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import nltk as nl\n",
+    "from collections import defaultdict"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Conhecendo os dados:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>titulo</th>\n",
+       "      <th>conteudo</th>\n",
+       "      <th>idNoticia</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>11 dos eleitores do País são filiados a legendas</td>\n",
+       "      <td>Há porém variações regionais nesse fenômeno En...</td>\n",
+       "      <td>7617</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>11 executivos integram 1º pedido de condenação...</td>\n",
+       "      <td>CURITIBA A força-tarefa da Operação Lava Jato ...</td>\n",
+       "      <td>412</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>11 executivos integram 1º pedido de condenação...</td>\n",
+       "      <td>CURITIBA A força-tarefa da Operação Lava Jato ...</td>\n",
+       "      <td>415</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>13 de deputados do PMDB quer romper com PT</td>\n",
+       "      <td>O Estado ouviu 54 dos 74 deputados do PMDB em ...</td>\n",
+       "      <td>6736</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>2014 começou em 2007</td>\n",
+       "      <td>O estudo do Estadão Dados publicado ontem sobr...</td>\n",
+       "      <td>7611</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                              titulo  \\\n",
+       "0   11 dos eleitores do País são filiados a legendas   \n",
+       "1  11 executivos integram 1º pedido de condenação...   \n",
+       "2  11 executivos integram 1º pedido de condenação...   \n",
+       "3         13 de deputados do PMDB quer romper com PT   \n",
+       "4                               2014 começou em 2007   \n",
+       "\n",
+       "                                            conteudo  idNoticia  \n",
+       "0  Há porém variações regionais nesse fenômeno En...       7617  \n",
+       "1  CURITIBA A força-tarefa da Operação Lava Jato ...        412  \n",
+       "2  CURITIBA A força-tarefa da Operação Lava Jato ...        415  \n",
+       "3  O Estado ouviu 54 dos 74 deputados do PMDB em ...       6736  \n",
+       "4  O estudo do Estadão Dados publicado ontem sobr...       7611  "
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df = pd.read_csv('noticias_estadao.csv')\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Agora, é preciso tratar os dados do csv em questão para podermos usá-los na resolução do problema, transformando cada palavra do documento em tokens e colocando-os em um dicionário. Para isso, utilizaremos a função word_tokenize() da biblioteca nltk. Para que não haja problemas com diferenciação de letras maíusculas e minúsculas na hora da pesquisa (Marcela != marcela), transformamos todas as letras da pesquisa em letras minúsculas.  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def make_tokens(df):\n",
+    "    inverted_index = defaultdict(set)\n",
+    "    for i, row in df.iterrows():\n",
+    "        tokens_titulos = (word.lower() for word in (nl.word_tokenize(row['titulo'])))\n",
+    "        \n",
+    "        for token in tokens_titulos:\n",
+    "            inverted_index[token].add(row['idNoticia'])\n",
+    "            \n",
+    "        tokens_conteudo = (word.lower() for word in (nl.word_tokenize(row['conteudo'])))\n",
+    "        for token in tokens_conteudo:\n",
+    "            inverted_index[token].add(row['idNoticia'])\n",
+    "        \n",
+    "    return inverted_index\n",
+    "\n",
+    "dicionario = make_tokens(df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Foi pedido para que se implementasse 3 algoritmos:\n",
+    "- 1-termo: usuário passa um termo e o algoritmo retorna os documentos associados;\n",
+    "- Busca AND: todos os termos da consulta devem estar presentes na página;\n",
+    "- Busca OR: algum dos termos da consulta deve estar presente na página.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def termo(termo):\n",
+    "    return dicionario[termo]\n",
+    "\n",
+    "#busca por termos AND\n",
+    "def busca_and(termo1, termo2):\n",
+    "    busca1 = dicionario[termo1]\n",
+    "    busca2 = dicionario[termo2]\n",
+    "    return busca1 & busca2\n",
+    "\n",
+    "#busca por temos OR\n",
+    "def busca_or(termo1, termo2):\n",
+    "    busca1 = dicionario[termo1]\n",
+    "    busca2 = dicionario[termo2]\n",
+    "    return busca1 | busca2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Método de busca final, que recebe uma string de pesquisa (que é um array de caracteres em python) e retorna o array resultante com os ids das notícias correspondentes à pesquisa:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def busca(pesquisa):\n",
+    "    pesquisa = pesquisa.split()\n",
+    "    if len(pesquisa) == 1:\n",
+    "        return termo(pesquisa[0].lower())\n",
+    "    else:\n",
+    "        if pesquisa[1] == \"AND\":\n",
+    "            return busca_and(pesquisa[0].lower(), pesquisa[2].lower())\n",
+    "        elif pesquisa[1] == \"OR\":\n",
+    "            return busca_or(pesquisa[0].lower(), pesquisa[2].lower())\n",
+    "        else:\n",
+    "            return \"Não encontrado!\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "assert len(busca(\"debate OR presidencial\"))== 1770\n",
+    "assert len(busca(\"debate AND presidencial\")) == 201\n",
+    "assert len(busca(\"presidenciáveis OR corruptos\")) == 164\n",
+    "assert len(busca(\"presidenciáveis AND corruptos\"))== 0\n",
+    "assert len(busca(\"Belo OR Horizonte\")) == 331\n",
+    "assert len(busca(\"Belo AND Horizonte\")) == 242"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
